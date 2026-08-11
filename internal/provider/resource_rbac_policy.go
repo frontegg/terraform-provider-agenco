@@ -284,9 +284,9 @@ func (r *RbacPolicyResource) applyPolicy(
 	model.CustomCodeToolIDs = nullIfEmptySet(ctx, policy.CustomCodeToolIDs, diagnostics)
 	model.CustomIntegrationTools = nullIfEmptySet(ctx, policy.CustomIntegrationTools, diagnostics)
 
-	// The RBAC read route returns neither enabled nor appIds — GetRbacPolicyResponse projects
-	// only the shared fields plus keys. Those two keep their configured values, so drift made
-	// outside Terraform in either field will not be detected.
+	// The RBAC read route returns neither enabled nor appIds — it projects only the fields
+	// shared by every policy type plus keys. Those two keep their configured values, so drift
+	// made outside Terraform in either field will not be detected.
 	if policy.Type != "" {
 		model.Type = types.StringValue(policy.Type)
 	}

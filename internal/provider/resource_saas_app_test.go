@@ -6,12 +6,12 @@ import "testing"
 // behavior rather than a documented contract, so if Frontegg moves them this is the test that
 // should fail rather than users silently getting stale URLs.
 func TestFronteggOAuthURLs(t *testing.T) {
-	appURL, loginURL := fronteggOAuthURLs("vbqal09e22182nk9evkhc.stg.frontegg.com")
+	appURL, loginURL := fronteggOAuthURLs("abc123def456.frontegg.com")
 
-	if want := "https://vbqal09e22182nk9evkhc.stg.frontegg.com/oauth/portal"; appURL != want {
+	if want := "https://abc123def456.frontegg.com/oauth/portal"; appURL != want {
 		t.Errorf("app URL: want %q, got %q", want, appURL)
 	}
-	if want := "https://vbqal09e22182nk9evkhc.stg.frontegg.com/oauth"; loginURL != want {
+	if want := "https://abc123def456.frontegg.com/oauth"; loginURL != want {
 		t.Errorf("login URL: want %q, got %q", want, loginURL)
 	}
 }

@@ -265,7 +265,7 @@ These are limits of the underlying Frontegg API, surfaced here so the behavior i
 - **`agenco_agent` cannot be updated.** The agent registry has create and delete only, so every
   configurable attribute forces replacement — which rotates the agent's credentials.
 - **`agenco_rbac_policy` does not detect drift in `enabled` or `application_ids`.** The API's RBAC
-  read route projects only the shared policy fields plus `keys`, so those two attributes keep
+  read route projects only the fields shared by every policy type plus `keys`, so those two keep
   their configured values.
 - **Write-only fields keep their configured values**: `client_secret` and `api_key` are returned
   masked or omitted, `code`/`code_content` live in the code-execution service, and
@@ -323,10 +323,10 @@ application attribute the API does not document a default for — `FREE_ACCESS` 
 observed portal behavior rather than the schema.
 
 `base_url` deserves a note. The API requires it, but for any tool imported into an
-`agenco_mcp_source` the gateway replaces it with that source's `source_url` at invocation time
-(`tool-locator.service.ts`), so it only ever applies to tools upserted without a source. Set it if
-you have those; otherwise the placeholder is harmless — `example.com` is reserved by RFC 2606 and
-cannot reach a real service.
+`agenco_mcp_source` the gateway resolves that tool against the source's own `source_url`, so
+`base_url` only ever applies to tools upserted without a source. Set it if you have those;
+otherwise the placeholder is harmless — `example.com` is reserved by RFC 2606 and cannot reach a
+real service.
 
 Note the API's own `apiTimeout` fallback constant is `3000`, but it is unreachable — the request
 validator rejects a missing value outright, so the provider's default is what actually applies.

@@ -2,8 +2,8 @@ package client
 
 import "sort"
 
-// maskingDetectors maps the Terraform detector name to its API field. Generated from
-// app-integrations PolicyConfigurationDto; add new entries when the API adds detectors.
+// maskingDetectors maps the Terraform detector name to the field the masking policy API
+// expects. Add new entries when the API gains detectors.
 var maskingDetectors = map[string]string{
 	"aba_routing_number":                           "abaRoutingNumber",
 	"au_abn":                                       "auAbn",

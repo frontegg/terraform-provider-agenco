@@ -41,9 +41,9 @@ const (
 	defaultAPITimeout = 5000
 
 	// placeholderBaseURL stands in for a base URL the caller did not supply. The API requires
-	// one, and for source-backed tools the gateway overwrites it with the source's own URL
-	// (see tool-locator.service.ts), so this is only ever used by sourceless tools. It is the
-	// value the portal sends, and example.com is reserved by RFC 2606.
+	// one, but the gateway resolves a source-backed tool against its own source URL, so this is
+	// only ever used by tools with no source. It is the value the Frontegg portal sends, and
+	// example.com is reserved by RFC 2606 so it cannot reach a real service.
 	placeholderBaseURL = "https://example.com"
 )
 
