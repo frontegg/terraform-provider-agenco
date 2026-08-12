@@ -1,0 +1,157 @@
+# This workflow automatically creates a new version tag when code is pushed/merged to master.
+# It increments the version based on commit message keywords:
+# - "#major" in commit message: bumps major version (v1.0.0 -> v2.0.0)
+# - "#minor" in commit message: bumps minor version (v1.0.0 -> v1.1.0)
+# - Default: bumps patch version (v1.0.0 -> v1.0.1)
+#
+# After creating the tag, the release.yml workflow will be triggered to create the release.
+
+name: Auto Version Tag
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag-version:
+    name: Create Version Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest tag
+        id: get_latest_tag
+        run: |
+          # Fetch all tags
+          git fetch --tags
+
+          # Get the latest tag, default to v0.0.0 if no tags exist
+          LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "Latest tag: $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Determine version bump type
+        id: bump_type
+        run: |
+          # Get commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          # Check for version bump keywords
+          if echo "$COMMIT_MSG" | grep -iq "#major"; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -iq "#minor"; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          else
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          LATEST_TAG="${{ steps.get_latest_tag.outputs.latest_tag }}"
+          BUMP_TYPE="${{ steps.bump_type.outputs.bump }}"
+
+          # Remove 'v' prefix for calculation
+          VERSION=${LATEST_TAG#v}
+
+          # Split version into components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Handle pre-release versions (strip anything after -)
+          PATCH=${PATCH%%-*}
+
+          # Ensure we have valid numbers
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+
+          # Increment based on bump type
+          case $BUMP_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+          if git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
+            echo "Tag $NEW_VERSION already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $NEW_VERSION does not exist"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create annotated tag
+          git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+
+          # Push tag
+          git push origin "$NEW_VERSION"
+
+          echo "Successfully created and pushed tag: $NEW_VERSION"
+
+      - name: Summary
+        run: |
+          echo "## Version Tag Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous version:** ${{ steps.get_latest_tag.outputs.latest_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump type:** ${{ steps.bump_type.outputs.bump }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New version:** ${{ steps.new_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_tag.outputs.exists }}" == "true" ]; then
+            echo "- **Status:** Tag already existed, skipped creation" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Status:** Tag created and pushed successfully" >> $GITHUB_STEP_SUMMARY
+          fi
+
+    outputs:
+      new_version: ${{ steps.new_version.outputs.new_version }}
+      tag_created: ${{ steps.check_tag.outputs.exists == 'false' }}
+
+  # Trigger the release workflow after tag is created
+  # This is needed because tags pushed via GITHUB_TOKEN don't trigger other workflows
+  release:
+    name: Trigger Release
+    needs: tag-version
+    # Use fromJSON to properly convert the string 'true'/'false' to boolean
+    if: fromJSON(needs.tag-version.outputs.tag_created)
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag-version.outputs.new_version }}
+    secrets: inherit

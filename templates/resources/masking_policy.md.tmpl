@@ -1,0 +1,64 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+{{ if .HasExample -}}
+## Example Usage
+
+{{ tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Supported detectors
+
+`detectors` accepts any of the 90 names below. Each maps to one built-in PII detector in the
+Frontegg masking engine.
+
+| Detector | Detector | Detector |
+| --- | --- | --- |
+| `aba_routing_number` | `germany_vat_number` | `south_korea_alien_registeration_number` |
+| `au_abn` | `hong_kong_id` | `south_korea_credit_card_number` |
+| `au_acn` | `iban_code` | `south_korea_domestic_residence_report_number` |
+| `au_medicare` | `il_bank_number` | `south_korea_driver_license_number` |
+| `au_tfn` | `il_id_number` | `south_korea_health_insurance_number` |
+| `australia_passport_number` | `il_passport_re` | `south_korea_id_number` |
+| `austria_ssn` | `ip_address` | `south_korea_passport_mrz_number` |
+| `bitcoin_address` | `it_driver_license` | `south_korea_passport_number` |
+| `br_cpf_number` | `it_fiscal_code` | `south_korea_resident_registration_number` |
+| `brazil_cnpj_number` | `it_identity_card` | `spain_id_dni` |
+| `bulgarian_uniform_civil_number` | `it_passport` | `spain_ssn` |
+| `canada_bank_account_number` | `it_vat_code` | `swift_code` |
+| `canada_drivers_license_number` | `japan_bank_account_number` | `switzerland_ssn` |
+| `canada_health_service_number` | `japan_driver_license_number` | `taiwan_national_id_number` |
+| `canada_passport` | `japan_my_number_corporate` | `thailand_id_number` |
+| `canada_personal_health_id_number_phin` | `japan_my_number_personal` | `uae_identity_card_number` |
+| `canada_social_insurance_number` | `japan_passport_number` | `uae_passport` |
+| `china_id_number` | `japan_residence_card_number` | `uk_driver_license_number` |
+| `credit_card` | `japan_resident_registration_number` | `uk_electoral_roll_number` |
+| `croatia_id_number` | `japan_social_insurance_number_sin` | `uk_national_insurance_number_nino` |
+| `cvv_cvc` | `malaysia_id_number` | `uk_nhs` |
+| `dutch_bank_account_number` | `medical_license` | `uk_unique_taxpayer_reference_number` |
+| `email_address` | `mexico_unique_population_registry_code_curp` | `unverified_credit_card` |
+| `es_nif` | `netherland_bsn` | `url` |
+| `ethereum_address` | `new_zealand_nhi_number` | `us_bank_number` |
+| `france_ssn_nir` | `phone_number` | `us_driver_license` |
+| `germany_drivers_license_number` | `public_ip_address` | `us_itin` |
+| `germany_id_number` | `sg_nric_fin` | `us_passport` |
+| `germany_passport_number` | `singapore_driver_license_number` | `us_ssn` |
+| `germany_tax_id_number` | `singapore_passport_number` | `vin` |
+
+{{ if .HasImport -}}
+## Import
+
+Import is supported using the following syntax:
+
+{{ codefile "shell" .ImportFile }}
+{{- end }}
