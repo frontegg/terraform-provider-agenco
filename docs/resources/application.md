@@ -34,8 +34,10 @@ resource "agenco_application" "storefront" {
 ### Optional
 
 - `access_type` (String) Access model for the application. One of: [FREE_ACCESS MANAGED_ACCESS]. Defaults to FREE_ACCESS, which is what the Frontegg portal sends when onboarding an application. MANAGED_ACCESS requires tenants to be assigned to the application explicitly, through the tenant-assignments API this provider does not cover.
+- `allow_cimd` (Boolean) Whether clients may identify themselves with a Client ID Metadata Document instead of pre-registering. This is the CIMD counterpart to allow_dcr. Defaults to false.
 - `allow_dcr` (Boolean) Whether OAuth Dynamic Client Registration is allowed for this application, which is how MCP clients register themselves. Defaults to true, matching the state the Frontegg portal leaves an onboarded application in — note this is the opposite of the API's own default of false. Set it to false to require pre-registered OAuth clients.
 - `description` (String) Free-text description of the application.
+- `dpop_enforcement_type` (String) How strictly DPoP proof-of-possession is applied to tokens issued for this application. One of: [disabled supported enforced] — disabled ignores DPoP, supported honours it when a client offers it, enforced rejects tokens without it. Defaults to disabled.
 - `frontend_stack` (String) Frontend stack the application is built with. One of: [react vue angular next.js vanilla.js ionic flutter react-native kotlin swift]. Defaults to react.
 - `is_active` (Boolean) Whether the application is active. Defaults to true.
 - `is_default` (Boolean) Whether this is the vendor's default application. Defaults to false.
@@ -44,9 +46,7 @@ resource "agenco_application" "storefront" {
 
 ### Read-Only
 
-- `allow_cimd` (Boolean) Whether client ID metadata document clients are allowed. Read-only here: the applications API returns it but the create and update payloads are not documented to accept it, so it is reported rather than managed.
 - `app_host` (String) Host assigned to the application by Frontegg.
-- `dpop_enforcement_type` (String) How DPoP proof-of-possession is enforced for tokens issued to this application. Read-only here, for the same reason as allow_cimd.
 - `id` (String) Application ID.
 - `vendor_id` (String) Vendor that owns the application.
 

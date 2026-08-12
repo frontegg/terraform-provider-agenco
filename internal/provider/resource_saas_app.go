@@ -188,12 +188,21 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Default:  booldefault.StaticBool(true),
 			},
 			"allow_cimd": schema.BoolAttribute{
-				Description: "Whether client ID metadata document clients are allowed. Read-only.",
-				Computed:    true,
+				Description: "Whether clients may identify themselves with a Client ID Metadata Document " +
+					"instead of pre-registering. The CIMD counterpart to allow_dcr. Defaults to false.",
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
 			},
 			"dpop_enforcement_type": schema.StringAttribute{
-				Description: "How DPoP proof-of-possession is enforced for this application. Read-only.",
-				Computed:    true,
+				Description: fmt.Sprintf("How strictly DPoP proof-of-possession is applied to tokens issued "+
+					"for this application. One of: %v. Defaults to disabled.", dpopEnforcementTypes),
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("disabled"),
+				Validators: []validator.String{
+					stringvalidator.OneOf(dpopEnforcementTypes...),
+				},
 			},
 			"mcp_configuration_id": schema.StringAttribute{
 				Description: "ID of the MCP configuration created for the application.",
@@ -466,6 +475,8 @@ func (r *SaasAppResource) applicationRequest(plan SaasAppResourceModel, appURL, 
 		FrontendStack: plan.FrontendStack.ValueString(),
 		Description:   plan.Description.ValueString(),
 		AllowDcr:      boolPointer(plan.AllowDcr),
+		AllowCimd:     boolPointer(plan.AllowCimd),
+		DPoPEnforce:   plan.DPoPEnforce.ValueString(),
 	}
 }
 
