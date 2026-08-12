@@ -29,3 +29,15 @@ resource "agenco_identity_configuration" "default" {
 ### Read-Only
 
 - `id` (String) Identity configuration ID.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# One configuration per vendor; the ID is resolved from your credentials rather than looked up.
+# Importing performs no write, so the stored token lifetime is preserved until you apply.
+terraform import agenco_identity_configuration.default 5ead690e-0000-0000-0000-000000000000
+```

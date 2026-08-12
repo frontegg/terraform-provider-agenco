@@ -22,7 +22,11 @@ vet:
 tidy:
 	go mod tidy
 
+# The registry Overview comes from docs/index.md, which tfplugindocs builds from
+# templates/index.md.tmpl — not from README.md. Derive that template from the README first so the
+# two cannot drift.
 docs:
+	python3 scripts/gen-index-template.py
 	tfplugindocs generate --provider-name agenco
 
 # Writes a Terraform CLI config pointing frontegg/agenco at this working copy, so plan and

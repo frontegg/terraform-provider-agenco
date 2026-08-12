@@ -19,6 +19,12 @@ terraform-provider-agenco
 dev.tfrc
 local-test/
 
+# GPG key material. The public key belongs on the Terraform Registry, not in git; the private
+# key must never be committed.
+*.asc
+*.gpg
+*.key
+
 # Go
 *.exe
 *.exe~

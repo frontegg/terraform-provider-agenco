@@ -32,3 +32,16 @@ resource "agenco_allowed_origins" "default" {
 ### Read-Only
 
 - `id` (String) Vendor ID.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# There is one allow-list per vendor, so the ID is not used to look anything up — it is resolved
+# from your credentials. Pass the vendor ID for readability. Importing performs no write, so the
+# existing origins are preserved until you apply.
+terraform import agenco_allowed_origins.default 5ead690e-0000-0000-0000-000000000000
+```
