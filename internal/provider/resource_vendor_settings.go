@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/frontegg/terraform-provider-agenco/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -11,7 +12,10 @@ import (
 
 // ---- Allowed origins ----
 
-var _ resource.Resource = &AllowedOriginsResource{}
+var (
+	_ resource.Resource                = &AllowedOriginsResource{}
+	_ resource.ResourceWithImportState = &AllowedOriginsResource{}
+)
 
 func NewAllowedOriginsResource() resource.Resource {
 	return &AllowedOriginsResource{}
@@ -125,9 +129,19 @@ func (r *AllowedOriginsResource) Delete(ctx context.Context, req resource.Delete
 	}
 }
 
+// ImportState adopts the vendor's existing allow-list without writing to it. There is one per
+// vendor, so the ID is not used to look anything up — Read resolves it from the credentials and
+// overwrites whatever was passed. Pass the vendor ID for readability.
+func (r *AllowedOriginsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
 // ---- Identity configuration ----
 
-var _ resource.Resource = &IdentityConfigurationResource{}
+var (
+	_ resource.Resource                = &IdentityConfigurationResource{}
+	_ resource.ResourceWithImportState = &IdentityConfigurationResource{}
+)
 
 func NewIdentityConfigurationResource() resource.Resource {
 	return &IdentityConfigurationResource{}
@@ -231,4 +245,11 @@ func (r *IdentityConfigurationResource) Delete(ctx context.Context, req resource
 		"The Frontegg API has no delete route for the identity configuration. It has been removed from "+
 			"Terraform state but the stored settings are unchanged.",
 	)
+}
+
+// ImportState adopts the vendor's existing configuration without writing to it. There is one per
+// vendor, so the ID is not used to look anything up — Read resolves it from the credentials and
+// overwrites whatever was passed. Pass the configuration ID for readability.
+func (r *IdentityConfigurationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

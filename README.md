@@ -242,6 +242,24 @@ terraform import agenco_tool_hook.list_filter "$APP_ID/LIST_TOOLS"
 terraform import agenco_agent_type.claude_code "$APP_ID/claude-code"
 ```
 
+Vendor-wide singletons take an ID that is not looked up — there is exactly one per vendor, so it
+is resolved from your credentials:
+
+```bash
+terraform import agenco_allowed_origins.default "$VENDOR_ID"
+terraform import agenco_identity_configuration.default "$VENDOR_ID"
+```
+
+Every resource is importable except `agenco_source_tools_active_status`, which wraps a bulk action
+with no readable state. Importing never writes to the API — it only records an existing object in
+state — so it is the safe way to bring live objects under management.
+
+One exception to that: `agenco_tools_import` can be imported, but `schema_file` and `schema_type`
+are not recoverable, since nothing in the API records which document produced a tool. Put both in
+configuration before importing. `schema_hash` stays unset, so the next apply re-imports the
+document and upserts the tools — that rewrites tool definitions for the source, but creates nothing
+new and deletes nothing.
+
 Each resource's page documents its exact import syntax.
 
 ## SaaS and Workforce
@@ -332,56 +350,90 @@ validator rejects a missing value outright, so the provider's default is what ac
 
 ## Migrating from agentlink
 
-`frontegg/agentlink` remains published and functional. To move a configuration across:
+`frontegg/agentlink` remains published and functional. Migration is **state-only**: no Frontegg
+object is destroyed or recreated at any point. But it is not change-free — the first apply after
+migrating writes to live objects, for reasons listed below. Read those before starting, and do one
+non-production environment end to end first.
 
-1. Update the provider requirement:
+Every resource type is renamed, so `terraform state mv` will not help — it would carry agentlink's
+schema into a differently-shaped agenco type. Use `state rm` plus `import` instead: `state rm`
+makes Terraform forget an object without touching it, and `import` records it by reading only.
 
-   ```hcl
-   terraform {
-     required_providers {
-       agenco = {
-         source  = "frontegg/agenco"
-         version = "~> 1.0"
-       }
-     }
-   }
-   ```
+### 1. Point at the new provider
 
-2. Move existing state to the new provider:
+```hcl
+terraform {
+  required_providers {
+    agenco = {
+      source  = "frontegg/agenco"
+      version = "~> 1.0"
+    }
+  }
+}
+```
 
-   ```bash
-   terraform state replace-provider registry.terraform.io/frontegg/agentlink \
-                                    registry.terraform.io/frontegg/agenco
-   ```
+### 2. Rename resource types and adjust the schema
 
-3. Rename the resource types in your configuration and state. The type prefix changes from
-   `agentlink_` to `agenco_`, and two resources were renamed:
+| agentlink | agenco | Import ID |
+| --- | --- | --- |
+| `agentlink_application` | `agenco_application` | application ID |
+| `agentlink_mcp_configuration` | `agenco_mcp_configuration` | application ID |
+| `agentlink_source` | `agenco_mcp_source` | `app_id/source_id` |
+| `agentlink_tools_import` | `agenco_tools_import` | `app_id/source_id` |
+| `agentlink_conditional_policy` | `agenco_conditional_policy` | policy ID |
+| `agentlink_rbac_policy` | `agenco_rbac_policy` | policy ID |
+| `agentlink_masking_policy` | `agenco_masking_policy` | policy ID |
+| `agentlink_allowed_origins` | `agenco_allowed_origins` | vendor ID |
+| `agentlink_identity_configuration` | `agenco_identity_configuration` | configuration ID |
 
-   | agentlink | agenco |
-   | --- | --- |
-   | `agentlink_application` | `agenco_application` |
-   | `agentlink_mcp_configuration` | `agenco_mcp_configuration` |
-   | `agentlink_source` | `agenco_mcp_source` |
-   | `agentlink_tools_import` | `agenco_tools_import` |
-   | `agentlink_conditional_policy` | `agenco_conditional_policy` |
-   | `agentlink_rbac_policy` | `agenco_rbac_policy` |
-   | `agentlink_masking_policy` | `agenco_masking_policy` |
-   | `agentlink_allowed_origins` | `agenco_allowed_origins` |
-   | `agentlink_identity_configuration` | `agenco_identity_configuration` |
+Schema changes to make at the same time:
 
-   Use `terraform state mv` for each resource, then `terraform plan` to confirm no changes.
+- **`agenco_masking_policy`** replaces the 15 boolean detector attributes with a single `detectors`
+  set covering all 90 detectors. `credit_card = true` becomes `detectors = ["credit_card"]`.
+- **Policy `app_ids`** is now `application_ids`.
+- **Policy `targeting`** is a real nested block supporting nested `condition_group`s, rather than a
+  flat object.
+- **`agenco_mcp_source`** gained `is_local`, `slug`, `two_step_callback`, `override_headers`,
+  `external_authorization_url`, `scopes`, `client_id` and `client_secret`. `vendor_id` is now
+  computed — remove it from configuration.
 
-4. Adjust for the schema changes:
+### 3. Move each resource
 
-   - **`agenco_masking_policy`** replaces the 15 boolean detector attributes with a single
-     `detectors` set covering all 90 detectors. `credit_card = true` becomes
-     `detectors = ["credit_card"]`.
-   - **Policy `app_ids`** is now `application_ids`.
-   - **`agenco_mcp_source`** gained `is_local`, `slug`, `two_step_callback`, `override_headers`,
-     `external_authorization_url`, `scopes`, `client_id` and `client_secret`. The old `vendor_id`
-     attribute is now computed only.
-   - **Policy `targeting`** is a real nested block supporting nested `condition_group`s, rather
-     than a flat object.
+```bash
+terraform state rm  agentlink_application.example
+terraform import    agenco_application.example "$APP_ID"
+terraform plan          # expect a NON-empty diff — see below
+```
+
+Fold whatever the plan wants to change into configuration, then apply. Do not apply through the
+diff without reading it.
+
+### 4. Expect these changes on the first apply
+
+**Two defaults differ between the providers**, so identical configuration produces different
+results. These are definite, not hypothetical: agentlink pinned its defaults, so your live values
+*are* `false` and `agent`.
+
+| Attribute | agentlink 0.4.7 | agenco | Effect |
+| --- | --- | --- | --- |
+| `allow_dcr` | `false` | `true` | **Enables OAuth Dynamic Client Registration** |
+| `type` | `agent` | `web` | Application type changes |
+
+Pin both explicitly if you want to keep the agentlink values.
+
+**RBAC policies show a diff on `enabled` and `application_ids`.** The API's RBAC read route returns
+neither field, so import cannot recover them; your configured values are written back on the first
+apply. Same values, but it is a write.
+
+**`agenco_tools_import` re-runs once.** It imports fine, but `schema_file` and `schema_type` are not
+recoverable — nothing in the API records which document produced a tool — so the content hash is
+unset and the next apply re-imports the document and upserts the tools. That rewrites tool
+definitions for the source; it creates nothing and deletes nothing.
+
+**Newly-managed MCP configuration fields.** agentlink managed `base_url` and `api_timeout`; agenco
+manages eleven. The extra nine default to the values the API already holds, so this is usually
+clean — unless you changed advanced tools, integration tools, the behaviour risk threshold or the
+tool page size outside Terraform, in which case they reset to the defaults.
 
 ## Development
 

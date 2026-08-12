@@ -11,6 +11,7 @@ import (
 	"github.com/frontegg/terraform-provider-agenco/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -19,7 +20,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.Resource = &ToolsImportResource{}
+var (
+	_ resource.Resource                = &ToolsImportResource{}
+	_ resource.ResourceWithImportState = &ToolsImportResource{}
+)
 
 // schemaTypes are the schema formats the API can import tools from.
 var schemaTypes = []string{"openapi", "graphql"}
@@ -124,6 +128,14 @@ func (r *ToolsImportResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// After an import there is no schema_file in state — it lives only in configuration — so
+	// there is nothing to hash yet. Leave the hash unset rather than warning about a path the
+	// user never gave us.
+	if state.SchemaFile.IsNull() || state.SchemaFile.ValueString() == "" {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		return
+	}
+
 	contents, err := os.ReadFile(state.SchemaFile.ValueString())
 	if err != nil {
 		// A missing file is not drift in the remote object; leave state as-is and let the
@@ -170,6 +182,33 @@ func (r *ToolsImportResource) Delete(ctx context.Context, req resource.DeleteReq
 	if err != nil && !client.IsNotFound(err) {
 		resp.Diagnostics.AddError("Unable to delete imported tools", err.Error())
 	}
+}
+
+// ImportState accepts "application_id/source_id" and adopts an import that already happened,
+// without calling the API. schema_file and schema_type cannot be recovered — the API stores no
+// record of which document produced a tool — so they must be present in configuration, and
+// schema_hash stays unset until the next apply re-runs the import.
+func (r *ToolsImportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	segments, err := splitImportID(req.ID, 2)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("Expected \"application_id/source_id\": %s", err.Error()),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_id"), segments[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("source_id"), segments[1])...)
+
+	resp.Diagnostics.AddWarning(
+		"Imported tools_import will re-run on the next apply",
+		"schema_file and schema_type are not recoverable from the API, so schema_hash could not be "+
+			"restored. Add both to your configuration; the next apply re-imports the document and "+
+			"upserts the tools. That rewrites tool definitions for this source but creates nothing new "+
+			"and deletes nothing.",
+	)
 }
 
 func (r *ToolsImportResource) runImport(ctx context.Context, plan *ToolsImportResourceModel, diagnostics *diag.Diagnostics) {
