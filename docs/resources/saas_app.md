@@ -24,35 +24,50 @@ For finer-grained control, use `agenco_application` plus `agenco_mcp_configurati
 ## Example Usage
 
 ```terraform
-# A name is all this needs. app_url and login_url are derived from the host Frontegg assigns,
-# giving the application its own OAuth endpoints, and base_url and api_timeout are defaulted.
-# Right for an agent-only application with no browser UI.
-resource "agenco_saas_app" "agent_only" {
+# A name is all this needs. login_url and app_url are derived from the host Frontegg assigns,
+# base_url and api_timeout are defaulted, and allow_dcr is sent as true so MCP clients can
+# register themselves.
+resource "agenco_saas_app" "orders_agent" {
   name = "Orders Agent"
 }
 
-# Supplied values are never overridden, so point the application at your own URLs when it has a
-# browser UI, and at your API when you upsert tools with no source.
+# Any value you do supply is used verbatim and never overridden, so point the application at your
+# own URLs when it has a browser UI.
 resource "agenco_saas_app" "storefront" {
   name      = "Storefront"
   app_url   = "https://storefront.example.com"
   login_url = "https://storefront.example.com/login"
-  base_url  = "https://api.example.com"
-
-  behavior_risk_threshold = "medium"
-  behavior_risk_actions = {
-    low    = "observe"
-    medium = "step_up"
-    high   = "block"
-  }
 }
 
-# Sources, tools and policies attach through the exported application_id.
+# Everything downstream hangs off the exported application_id: a REST source, tools imported from
+# an OpenAPI document, and a masking policy over all of them.
 resource "agenco_mcp_source" "orders_api" {
-  application_id = agenco_saas_app.agent_only.application_id
+  application_id = agenco_saas_app.storefront.application_id
   name           = "Orders API"
   type           = "REST"
   source_url     = "https://api.example.com"
+}
+
+resource "agenco_tools_import" "orders_api" {
+  application_id = agenco_saas_app.storefront.application_id
+  source_id      = agenco_mcp_source.orders_api.id
+  schema_file    = "${path.module}/schemas/orders-openapi.json"
+  schema_type    = "openapi"
+}
+
+resource "agenco_masking_policy" "strip_pii" {
+  name              = "Strip PII from tool responses"
+  enabled           = true
+  application_ids   = [agenco_saas_app.storefront.application_id]
+  internal_tool_ids = [] # empty means every tool
+
+  detectors = ["credit_card", "email_address", "phone_number", "us_ssn"]
+
+  targeting {
+    then {
+      result = "mask"
+    }
+  }
 }
 ```
 
@@ -66,6 +81,7 @@ resource "agenco_mcp_source" "orders_api" {
 ### Optional
 
 - `access_type` (String) Access model for the application. One of: [FREE_ACCESS MANAGED_ACCESS]. Defaults to FREE_ACCESS.
+- `allow_cimd` (Boolean) Whether clients may identify themselves with a Client ID Metadata Document instead of pre-registering. The CIMD counterpart to allow_dcr. Defaults to false.
 - `allow_dcr` (Boolean) Whether OAuth Dynamic Client Registration is allowed, which is how MCP clients register themselves. Defaults to true, matching portal onboarding.
 - `api_timeout` (Number) Upstream request timeout in milliseconds, between 500 and 5000. Defaults to 5000.
 - `app_url` (String) URL the application is served from. Omit it and the provider derives https://{app_host}/oauth/portal from the host Frontegg assigns, which is what an agent-only application wants. A value you supply is never overridden.
@@ -73,6 +89,7 @@ resource "agenco_mcp_source" "orders_api" {
 - `behavior_risk_actions` (Map of String) Action taken per risk level, for example {low = "observe", high = "block"}.
 - `behavior_risk_threshold` (String) Risk level at which behavior enforcement kicks in. One of: low, medium, high.
 - `description` (String) Free-text description of the application.
+- `dpop_enforcement_type` (String) How strictly DPoP proof-of-possession is applied to tokens issued for this application. One of: [disabled supported enforced]. Defaults to disabled.
 - `enable_advanced_tools` (Boolean) Whether advanced tools are exposed through the gateway.
 - `external_authorization_url` (String) HTTPS authorization server URL when the upstream API is OAuth-protected.
 - `frontend_stack` (String) Frontend stack. One of: [react vue angular next.js vanilla.js ionic flutter react-native kotlin swift]. Defaults to react.
@@ -87,10 +104,8 @@ resource "agenco_mcp_source" "orders_api" {
 
 ### Read-Only
 
-- `allow_cimd` (Boolean) Whether client ID metadata document clients are allowed. Read-only.
 - `app_host` (String) Host Frontegg assigned to the application.
 - `application_id` (String) Application ID, for wiring up sources, tools and policies.
-- `dpop_enforcement_type` (String) How DPoP proof-of-possession is enforced for this application. Read-only.
 - `id` (String) Application ID. This resource is keyed on the application it creates.
 - `mcp_configuration_id` (String) ID of the MCP configuration created for the application.
 - `vendor_id` (String) Vendor that owns the application.

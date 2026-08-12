@@ -276,9 +276,6 @@ These are limits of the underlying Frontegg API, surfaced here so the behavior i
   appear in only one window across the whole rule.
 - **`agenco_saas_app` spans two API objects.** Destroying it deletes the application, and it must
   not be combined with `agenco_application` / `agenco_mcp_configuration` for the same application.
-- **`allow_cimd` and `dpop_enforcement_type` on `agenco_application` are read-only.** The
-  applications API returns both, but its documented create and update payloads do not accept
-  them, so the provider reports rather than manages them.
 
 ## Defaults
 
@@ -299,6 +296,8 @@ SaaS-onboarding trace so that a Terraform-created application matches a portal-c
 | `agenco_application.is_default` | `false` | Documented API default |
 | `agenco_application.allow_dcr` | `true` | The state portal onboarding leaves an application in |
 | `agenco_application.access_type` | `FREE_ACCESS` | What the portal sends on create |
+| `agenco_application.allow_cimd` | `false` | Observed value on a freshly created application |
+| `agenco_application.dpop_enforcement_type` | `disabled` | Observed value on a freshly created application |
 
 These are declared as provider defaults rather than left to the API on purpose. An
 optional-and-computed attribute with no default keeps its prior value when you delete it from the

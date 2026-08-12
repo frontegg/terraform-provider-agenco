@@ -42,6 +42,8 @@ type ApplicationRequest struct {
 	FrontendStack string `json:"frontendStack,omitempty"`
 	Description   string `json:"description,omitempty"`
 	AllowDcr      *bool  `json:"allowDcr,omitempty"`
+	AllowCimd     *bool  `json:"allowCimd,omitempty"`
+	DPoPEnforce   string `json:"dpopEnforcementType,omitempty"`
 }
 
 func (c *Client) ListApplications(ctx context.Context) ([]Application, error) {
