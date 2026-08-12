@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -113,7 +111,9 @@ func (r *McpSourceResource) Schema(ctx context.Context, req resource.SchemaReque
 					"agenco_mcp_configuration.", minAPITimeout, maxAPITimeout, defaultAPITimeout),
 				Optional: true,
 				Computed: true,
-				Default:  int64default.StaticInt64(defaultAPITimeout),
+				PlanModifiers: []planmodifier.Int64{
+					createDefaultInt64(defaultAPITimeout),
+				},
 				Validators: []validator.Int64{
 					int64validator.Between(minAPITimeout, maxAPITimeout),
 				},
@@ -122,15 +122,17 @@ func (r *McpSourceResource) Schema(ctx context.Context, req resource.SchemaReque
 				Description: "Whether the source is enabled.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"is_local": schema.BoolAttribute{
 				Description: "Whether the source is local, relaxing the HTTPS and DNS checks on source_url. " +
 					"Immutable after create.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
 					boolplanmodifier.RequiresReplace(),
 				},
 			},
@@ -148,7 +150,9 @@ func (r *McpSourceResource) Schema(ctx context.Context, req resource.SchemaReque
 					"exchanging the authorization code.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"external_authorization_url": schema.StringAttribute{
 				Description: "HTTPS authorization server URL. Setting it marks the source as OAuth-protected and " +
@@ -346,6 +350,9 @@ func (r *McpSourceResource) applySource(
 	model.ApplicationID = types.StringValue(source.AppID)
 	model.VendorID = types.StringValue(source.VendorID)
 	model.Name = types.StringValue(source.Name)
+	// type forces replacement, so leaving it unset here would make every imported source be
+	// destroyed and recreated on the next apply.
+	model.Type = types.StringValue(source.Type)
 	model.SourceURL = types.StringValue(source.SourceURL)
 	model.APITimeout = types.Int64Value(source.APITimeout)
 	model.Enabled = types.BoolValue(source.Enabled)

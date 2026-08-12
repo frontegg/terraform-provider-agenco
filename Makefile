@@ -46,4 +46,13 @@ smoke-apply: build dev.tfrc
 smoke-destroy: build dev.tfrc
 	cd local-test && TF_CLI_CONFIG_FILE=../dev.tfrc terraform destroy
 
-.PHONY: build install test testacc fmt vet tidy docs dev-override smoke-plan smoke-apply smoke-destroy
+# Migrates a fixture from frontegg/agentlink 0.4.7 into this working copy and asserts that nothing
+# is recreated. migration-validate needs no credentials; migration-test writes to a live vendor.
+migration-validate:
+	./test/migration/run.sh validate
+
+migration-test:
+	./test/migration/run.sh
+
+.PHONY: build install test testacc fmt vet tidy docs dev-override smoke-plan smoke-apply \
+	smoke-destroy migration-validate migration-test

@@ -9,9 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -109,7 +107,9 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 					"the tenant-assignments API this provider does not cover.", applicationAccessTypes),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("FREE_ACCESS"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("FREE_ACCESS"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationAccessTypes...),
 				},
@@ -118,19 +118,25 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description: "Whether this is the vendor's default application. Defaults to false.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"is_active": schema.BoolAttribute{
 				Description: "Whether the application is active. Defaults to true.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"type": schema.StringAttribute{
 				Description: fmt.Sprintf("Client form factor. One of: %v. Defaults to web.", applicationTypes),
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("web"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("web"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationTypes...),
 				},
@@ -140,7 +146,9 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 					"to react.", applicationFrontendStacks),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("react"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("react"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationFrontendStacks...),
 				},
@@ -156,7 +164,9 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 					"default of false. Set it to false to require pre-registered OAuth clients.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"app_host": schema.StringAttribute{
 				Description: "Host assigned to the application by Frontegg.",
@@ -167,7 +177,9 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 					"instead of pre-registering. This is the CIMD counterpart to allow_dcr. Defaults to false.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"dpop_enforcement_type": schema.StringAttribute{
 				Description: fmt.Sprintf("How strictly DPoP proof-of-possession is applied to tokens issued "+
@@ -176,7 +188,9 @@ func (r *ApplicationResource) Schema(ctx context.Context, req resource.SchemaReq
 					dpopEnforcementTypes),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("disabled"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("disabled"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(dpopEnforcementTypes...),
 				},

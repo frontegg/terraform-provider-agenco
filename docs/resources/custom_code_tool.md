@@ -40,7 +40,7 @@ resource "agenco_custom_code_tool" "summarize_order" {
 - `code_content` (String) Source code executed when the tool is called. Up to 100 KB.
 - `input_schema` (String) JSON Schema object describing the tool inputs, encoded as a JSON string.
 - `name` (String) Tool name. Alphanumeric plus underscores, dashes and periods.
-- `runtime` (String) Execution runtime. One of: [NODE_20 NODE_24]. Immutable after create.
+- `runtime` (String) Execution runtime. One of: [NODE_20 NODE_24]. Immutable after create, and absent from the API's read route, so an imported tool cannot recover it.
 
 ### Optional
 

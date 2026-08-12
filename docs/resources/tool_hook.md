@@ -39,7 +39,7 @@ resource "agenco_tool_hook" "list_filter" {
 
 - `internal_tool_ids` (Set of String) Tools the hook applies to. Required when hook_type is CALL_TOOL.
 - `is_active` (Boolean) Whether the hook runs.
-- `runtime` (String) Execution runtime. One of: [NODE_20 NODE_24]. Immutable after create, because the API accepts it only on create.
+- `runtime` (String) Execution runtime. One of: [NODE_20 NODE_24]. Immutable after create, because the API accepts it only on create. It is absent from the read route, so an imported hook cannot recover it.
 - `timeout` (Number) Hook timeout in seconds, between 5 and 10.
 
 ### Read-Only

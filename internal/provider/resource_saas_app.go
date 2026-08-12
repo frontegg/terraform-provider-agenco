@@ -12,10 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -145,7 +142,9 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 					applicationAccessTypes),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("FREE_ACCESS"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("FREE_ACCESS"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationAccessTypes...),
 				},
@@ -154,7 +153,9 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: fmt.Sprintf("Client form factor. One of: %v. Defaults to web.", applicationTypes),
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("web"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("web"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationTypes...),
 				},
@@ -163,7 +164,9 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: fmt.Sprintf("Frontend stack. One of: %v. Defaults to react.", applicationFrontendStacks),
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("react"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("react"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(applicationFrontendStacks...),
 				},
@@ -172,34 +175,44 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: "Whether this is the vendor's default application. Defaults to false.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"is_active": schema.BoolAttribute{
 				Description: "Whether the application is active. Defaults to true.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"allow_dcr": schema.BoolAttribute{
 				Description: "Whether OAuth Dynamic Client Registration is allowed, which is how MCP clients " +
 					"register themselves. Defaults to true, matching portal onboarding.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"allow_cimd": schema.BoolAttribute{
 				Description: "Whether clients may identify themselves with a Client ID Metadata Document " +
 					"instead of pre-registering. The CIMD counterpart to allow_dcr. Defaults to false.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"dpop_enforcement_type": schema.StringAttribute{
 				Description: fmt.Sprintf("How strictly DPoP proof-of-possession is applied to tokens issued "+
 					"for this application. One of: %v. Defaults to disabled.", dpopEnforcementTypes),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("disabled"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("disabled"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(dpopEnforcementTypes...),
 				},
@@ -217,14 +230,18 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 					"cannot reach a real service.",
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString(placeholderBaseURL),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString(placeholderBaseURL),
+				},
 			},
 			"api_timeout": schema.Int64Attribute{
 				Description: fmt.Sprintf("Upstream request timeout in milliseconds, between %d and %d. Defaults to %d.",
 					minAPITimeout, maxAPITimeout, defaultAPITimeout),
 				Optional: true,
 				Computed: true,
-				Default:  int64default.StaticInt64(defaultAPITimeout),
+				PlanModifiers: []planmodifier.Int64{
+					createDefaultInt64(defaultAPITimeout),
+				},
 				Validators: []validator.Int64{
 					int64validator.Between(minAPITimeout, maxAPITimeout),
 				},
@@ -237,25 +254,33 @@ func (r *SaasAppResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: "Whether advanced tools are exposed through the gateway.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"slim_semantic_search_enabled": schema.BoolAttribute{
 				Description: "Whether tool discovery uses the slim semantic search response.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"integration_tools_enabled": schema.BoolAttribute{
 				Description: "Whether connector tools from custom integrations are exposed.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"behavior_risk_threshold": schema.StringAttribute{
 				Description: "Risk level at which behavior enforcement kicks in. One of: low, medium, high.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("high"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("high"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(behaviorRiskLevels...),
 				},

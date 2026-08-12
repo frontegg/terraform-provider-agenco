@@ -44,3 +44,8 @@ local-test/
 # OS
 .DS_Store
 Thumbs.db
+
+# Migration test working directories and recorded IDs
+test/migration/workdir/
+test/migration/.validate/
+test/migration/ids-*.json
