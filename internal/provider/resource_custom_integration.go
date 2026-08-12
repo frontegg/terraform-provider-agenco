@@ -10,9 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -124,7 +122,9 @@ func (r *CustomIntegrationResource) Schema(ctx context.Context, req resource.Sch
 				Description: fmt.Sprintf("Authentication mode. One of: %v.", integrationAuthTypes),
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("oauth"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("oauth"),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(integrationAuthTypes...),
 				},
@@ -133,13 +133,17 @@ func (r *CustomIntegrationResource) Schema(ctx context.Context, req resource.Sch
 				Description: "Whether the connector is active.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"is_dev_creds_enabled": schema.BoolAttribute{
 				Description: "Whether Frontegg development credentials are used instead of your own OAuth app.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(false),
+				},
 			},
 			"client_id": schema.StringAttribute{
 				Description: "OAuth client ID. Required when auth_type is oauth and is_dev_creds_enabled is false.",

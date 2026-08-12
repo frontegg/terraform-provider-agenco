@@ -20,6 +20,7 @@ type Source struct {
 	AppID                    string           `json:"appId"`
 	Name                     string           `json:"name"`
 	Slug                     *string          `json:"slug"`
+	Type                     string           `json:"type"`
 	SourceURL                string           `json:"sourceUrl"`
 	Secret                   string           `json:"secret,omitempty"`
 	APITimeout               int64            `json:"apiTimeout"`

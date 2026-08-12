@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -97,15 +95,16 @@ func (r *ToolHookResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			"runtime": schema.StringAttribute{
 				Description: fmt.Sprintf("Execution runtime. One of: %v. Immutable after create, because the "+
-					"API accepts it only on create.", codeRuntimes),
+					"API accepts it only on create. It is absent from the read route, so an imported hook "+
+					"cannot recover it.", codeRuntimes),
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("NODE_24"),
+				PlanModifiers: []planmodifier.String{
+					createDefaultString("NODE_24"),
+					requiresReplaceIfKnownString(),
+				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(codeRuntimes...),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"fail_method": schema.StringAttribute{
@@ -120,7 +119,9 @@ func (r *ToolHookResource) Schema(ctx context.Context, req resource.SchemaReques
 				Description: "Whether the hook runs.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"timeout": schema.Int64Attribute{
 				Description: fmt.Sprintf("Hook timeout in seconds, between %d and %d.",
@@ -252,6 +253,14 @@ func (r *ToolHookResource) ImportState(ctx context.Context, req resource.ImportS
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_id"), segments[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("hook_type"), segments[1])...)
+
+	resp.Diagnostics.AddWarning(
+		"runtime cannot be recovered by import",
+		"The prehook the API returns does not carry a runtime, so the configured value is written to "+
+			"state on the next apply without being checked against the hook. That apply does not "+
+			"replace the hook, but if the value differs from the runtime it was created with, state "+
+			"will be wrong about it.",
+	)
 }
 
 // readToolIDs resolves internal_tool_ids and enforces that CALL_TOOL hooks name their tools.

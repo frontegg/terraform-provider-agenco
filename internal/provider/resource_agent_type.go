@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -90,7 +89,9 @@ func (r *AgentTypeResource) Schema(ctx context.Context, req resource.SchemaReque
 				Description: "Whether the rule is enforced.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"group_ids": schema.SetAttribute{
 				Description: "Directory group IDs the rule applies to. Required when all_users is false.",

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -84,13 +83,14 @@ func (r *CustomCodeToolResource) Schema(ctx context.Context, req resource.Schema
 				Required:    true,
 			},
 			"runtime": schema.StringAttribute{
-				Description: fmt.Sprintf("Execution runtime. One of: %v. Immutable after create.", codeRuntimes),
-				Required:    true,
+				Description: fmt.Sprintf("Execution runtime. One of: %v. Immutable after create, and absent "+
+					"from the API's read route, so an imported tool cannot recover it.", codeRuntimes),
+				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(codeRuntimes...),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					requiresReplaceIfKnownString(),
 				},
 			},
 			"input_schema": schema.StringAttribute{
@@ -101,7 +101,9 @@ func (r *CustomCodeToolResource) Schema(ctx context.Context, req resource.Schema
 				Description: "Whether the tool is exposed through the gateway.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					createDefaultBool(true),
+				},
 			},
 			"attached_integration_id": schema.StringAttribute{
 				Description: "Custom integration whose credentials this tool authenticates with.",
@@ -247,6 +249,14 @@ func (r *CustomCodeToolResource) ImportState(ctx context.Context, req resource.I
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_id"), segments[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), segments[1])...)
+
+	resp.Diagnostics.AddWarning(
+		"runtime cannot be recovered by import",
+		"The API does not return a custom code tool's runtime, so the configured value is written to "+
+			"state on the next apply without being checked against the tool. That apply does not "+
+			"replace the tool, but if the value differs from the runtime it was created with, state "+
+			"will be wrong about it.",
+	)
 }
 
 func (r *CustomCodeToolResource) applyTool(

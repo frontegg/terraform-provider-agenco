@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -93,7 +92,9 @@ func (r *ConditionalPolicyResource) Schema(ctx context.Context, req resource.Sch
 			Description: "Whether the policy result applies to all users.",
 			Optional:    true,
 			Computed:    true,
-			Default:     booldefault.StaticBool(false),
+			PlanModifiers: []planmodifier.Bool{
+				createDefaultBool(false),
+			},
 		},
 		"metadata": schema.MapAttribute{
 			Description: "Free-form string metadata stored alongside the policy.",

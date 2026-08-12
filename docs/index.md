@@ -358,13 +358,17 @@ validator rejects a missing value outright, so the provider's default is what ac
 ## Migrating from agentlink
 
 `frontegg/agentlink` remains published and functional. Migration is **state-only**: no Frontegg
-object is destroyed or recreated at any point. But it is not change-free — the first apply after
-migrating writes to live objects, for reasons listed below. Read those before starting, and do one
-non-production environment end to end first.
+object is destroyed or recreated. Two resources do get written on the first apply — see step 4.
 
-Every resource type is renamed, so `terraform state mv` will not help — it would carry agentlink's
-schema into a differently-shaped agenco type. Use `state rm` plus `import` instead: `state rm`
-makes Terraform forget an object without touching it, and `import` records it by reading only.
+Every resource type is renamed, so `terraform state mv` will not work; it would carry agentlink's
+schema into a differently-shaped agenco type. Use `state rm` plus `import`: `state rm` makes
+Terraform forget an object without touching it, and `import` records it by reading only.
+
+Verified end to end by [`test/migration`](https://github.com/frontegg/terraform-provider-agenco/tree/master/test/migration),
+which migrates a fixture built with agentlink 0.4.7 and fails if anything is created or destroyed, if
+the plan does not converge, or if any value that `import` read back is changed by the apply. It covers
+seven of the nine types below; the two vendor-wide singletons are not covered, because a test destroy
+would clear settings shared by the whole vendor.
 
 ### 1. Point at the new provider
 
@@ -409,38 +413,32 @@ Schema changes to make at the same time:
 ```bash
 terraform state rm  agentlink_application.example
 terraform import    agenco_application.example "$APP_ID"
-terraform plan          # expect a NON-empty diff — see below
+terraform plan
 ```
 
-Fold whatever the plan wants to change into configuration, then apply. Do not apply through the
-diff without reading it.
+Read the plan before applying. Only `agenco_rbac_policy` and `agenco_tools_import` should appear in
+it; anything else wanting a change means a schema difference from step 2 was missed. Nothing should
+be created or destroyed.
 
-### 4. Expect these changes on the first apply
+### 4. Expect exactly two writes on the first apply
 
-**Two defaults differ between the providers**, so identical configuration produces different
-results. These are definite, not hypothetical: agentlink pinned its defaults, so your live values
-*are* `false` and `agent`.
+**`agenco_rbac_policy`** shows a diff on `enabled` and `application_ids`. The API's RBAC read route
+returns neither, so import cannot recover them and your configured values are written back. Same
+values, but it is a write.
 
-| Attribute | agentlink 0.4.7 | agenco | Effect |
-| --- | --- | --- | --- |
-| `allow_dcr` | `false` | `true` | **Enables OAuth Dynamic Client Registration** |
-| `type` | `agent` | `web` | Application type changes |
+**`agenco_tools_import`** re-runs once. Nothing in the API records which document produced a tool, so
+`schema_hash` starts unset and the first apply re-imports your document and upserts the tools. That
+rewrites tool definitions for the source; it creates nothing and deletes nothing.
 
-Pin both explicitly if you want to keep the agentlink values.
+Nothing else changes. Provider defaults apply only when a resource is *created*, so an imported
+object keeps every value it already has — `type`, `allow_dcr`, `dpop_enforcement_type`, `is_active`
+and the rest — whether or not your configuration mentions the attribute. You do not need to pin
+anything to protect it. The trade-off: removing an attribute from configuration no longer reverts it
+to the default, so set it explicitly to change it.
 
-**RBAC policies show a diff on `enabled` and `application_ids`.** The API's RBAC read route returns
-neither field, so import cannot recover them; your configured values are written back on the first
-apply. Same values, but it is a write.
-
-**`agenco_tools_import` re-runs once.** It imports fine, but `schema_file` and `schema_type` are not
-recoverable — nothing in the API records which document produced a tool — so the content hash is
-unset and the next apply re-imports the document and upserts the tools. That rewrites tool
-definitions for the source; it creates nothing and deletes nothing.
-
-**Newly-managed MCP configuration fields.** agentlink managed `base_url` and `api_timeout`; agenco
-manages eleven. The extra nine default to the values the API already holds, so this is usually
-clean — unless you changed advanced tools, integration tools, the behaviour risk threshold or the
-tool page size outside Terraform, in which case they reset to the defaults.
+One behaviour does differ. `targeting` on `agentlink_conditional_policy` was accepted but never sent,
+so your live conditional policies have none. agenco implements it. Delete the block if you did not
+mean it, or translate it deliberately and expect it to take effect.
 
 <!-- schema generated by tfplugindocs -->
 ## Schema

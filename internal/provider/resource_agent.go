@@ -10,9 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -102,27 +99,30 @@ func (r *AgentResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"autonomous": schema.BoolAttribute{
 				Description: "Register the agent as autonomous. Autonomous agents take a description instead of " +
-					"an agent class and redirect URLs.",
+					"an agent class and redirect URLs. Absent from the API's read route, so an imported agent " +
+					"cannot recover it.",
 				Optional: true,
 				Computed: true,
-				Default:  booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					createDefaultBool(false),
+					requiresReplaceIfKnownBool(),
 				},
 			},
 			"description": schema.StringAttribute{
-				Description: "Description of the agent. Only used when autonomous is true.",
-				Optional:    true,
+				Description: "Description of the agent. Only used when autonomous is true. Absent from the " +
+					"API's read route, so an imported agent cannot recover it.",
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					requiresReplaceIfKnownString(),
 				},
 			},
 			"redirect_urls": schema.ListAttribute{
-				Description: "OAuth redirect URLs. Only used when autonomous is false.",
+				Description: "OAuth redirect URLs. Only used when autonomous is false. Absent from the API's " +
+					"read route, so an imported agent cannot recover them.",
 				Optional:    true,
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+					requiresReplaceIfKnownList(),
 				},
 			},
 			"tags": schema.SetAttribute{
@@ -268,6 +268,14 @@ func (r *AgentResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 func (r *AgentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.AddWarning(
+		"Three agent attributes cannot be recovered by import",
+		"The API's read route does not return autonomous, description or redirect_urls, so whatever "+
+			"your configuration sets for them is written to state on the next apply without being "+
+			"checked against the agent. It does not replace the agent — credentials are not rotated — "+
+			"but if a value differs from how the agent was registered, state will be wrong about it, "+
+			"and the API has no update route to reconcile it.",
+	)
 }
 
 // applyAgent maps the API response into state. includeSecret is true only right after

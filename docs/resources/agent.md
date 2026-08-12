@@ -43,10 +43,10 @@ output "reconciler_client_secret" {
 ### Optional
 
 - `agent_class` (String) Trust class of the agent. One of: [internal external unknown]. Ignored when autonomous is true.
-- `autonomous` (Boolean) Register the agent as autonomous. Autonomous agents take a description instead of an agent class and redirect URLs.
-- `description` (String) Description of the agent. Only used when autonomous is true.
+- `autonomous` (Boolean) Register the agent as autonomous. Autonomous agents take a description instead of an agent class and redirect URLs. Absent from the API's read route, so an imported agent cannot recover it.
+- `description` (String) Description of the agent. Only used when autonomous is true. Absent from the API's read route, so an imported agent cannot recover it.
 - `owner_email` (String) Email of the person responsible for the agent.
-- `redirect_urls` (List of String) OAuth redirect URLs. Only used when autonomous is false.
+- `redirect_urls` (List of String) OAuth redirect URLs. Only used when autonomous is false. Absent from the API's read route, so an imported agent cannot recover them.
 - `tags` (Set of String) Free-form tags attached to the agent.
 
 ### Read-Only
