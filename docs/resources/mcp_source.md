@@ -56,7 +56,7 @@ resource "agenco_mcp_source" "partner_mcp" {
 
 ### Optional
 
-- `api_timeout` (Number) Upstream request timeout in milliseconds, between 500 and 5000. The API requires this field, so the provider defaults it to 5000 for consistency with agenco_mcp_configuration.
+- `api_timeout` (Number) Upstream request timeout in milliseconds, at least 500 and at most 5000 unless the account allows extended timeouts. The API requires this field, so the provider defaults it to 5000 for consistency with agenco_mcp_configuration.
 - `client_id` (String) Pre-registered OAuth client ID. When set, the gateway skips Dynamic Client Registration.
 - `client_secret` (String, Sensitive) Pre-registered OAuth client secret. Omit for public clients.
 - `enabled` (Boolean) Whether the source is enabled.

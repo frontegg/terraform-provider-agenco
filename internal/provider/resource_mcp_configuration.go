@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,7 +32,8 @@ var behaviorRiskActions = []string{"observe", "step_up", "block"}
 
 const (
 	minAPITimeout = 500
-	maxAPITimeout = 5000
+	// defaultMaxAPITimeout is documented only; the API enforces the real cap, which a feature flag can raise.
+	defaultMaxAPITimeout = 5000
 
 	// defaultAPITimeout matches what the Frontegg portal sends when onboarding a SaaS
 	// application. The API rejects a missing apiTimeout, so the provider must supply one.
@@ -105,17 +107,19 @@ func (r *McpConfigurationResource) Schema(ctx context.Context, req resource.Sche
 				},
 			},
 			"api_timeout": schema.Int64Attribute{
-				Description: fmt.Sprintf("Upstream request timeout in milliseconds, between %d and %d. The API "+
+				Description: fmt.Sprintf("Upstream request timeout in milliseconds, at least %d and at most %d "+
+					"unless the account allows extended timeouts. The API "+
 					"requires this field, so the provider defaults it to %d — the value the Frontegg portal "+
 					"uses when onboarding a SaaS application.",
-					minAPITimeout, maxAPITimeout, defaultAPITimeout),
+					minAPITimeout, defaultMaxAPITimeout, defaultAPITimeout),
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.Int64{
 					createDefaultInt64(defaultAPITimeout),
+					int64planmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.Int64{
-					int64validator.Between(minAPITimeout, maxAPITimeout),
+					int64validator.AtLeast(minAPITimeout),
 				},
 			},
 			"external_authorization_url": schema.StringAttribute{

@@ -83,7 +83,7 @@ resource "agenco_masking_policy" "strip_pii" {
 - `access_type` (String) Access model for the application. One of: [FREE_ACCESS MANAGED_ACCESS]. Defaults to FREE_ACCESS.
 - `allow_cimd` (Boolean) Whether clients may identify themselves with a Client ID Metadata Document instead of pre-registering. The CIMD counterpart to allow_dcr. Defaults to false.
 - `allow_dcr` (Boolean) Whether OAuth Dynamic Client Registration is allowed, which is how MCP clients register themselves. Defaults to true, matching portal onboarding.
-- `api_timeout` (Number) Upstream request timeout in milliseconds, between 500 and 5000. Defaults to 5000.
+- `api_timeout` (Number) Upstream request timeout in milliseconds, at least 500 and at most 5000 unless the account allows extended timeouts. Defaults to 5000.
 - `app_url` (String) URL the application is served from. Omit it and the provider derives https://{app_host}/oauth/portal from the host Frontegg assigns, which is what an agent-only application wants. A value you supply is never overridden.
 - `base_url` (String) HTTPS base URL the gateway calls for tools that are not attached to a source. The API requires a value, so it defaults to https://example.com — the placeholder the portal sends. It is worth setting only if you upsert tools with no source: for anything imported into an agenco_mcp_source the gateway replaces this with the source's source_url at invocation time. example.com is RFC 2606 reserved, so the placeholder cannot reach a real service.
 - `behavior_risk_actions` (Map of String) Action taken per risk level, for example {low = "observe", high = "block"}.

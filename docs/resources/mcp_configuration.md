@@ -48,7 +48,7 @@ resource "agenco_mcp_configuration" "tuned" {
 
 ### Optional
 
-- `api_timeout` (Number) Upstream request timeout in milliseconds, between 500 and 5000. The API requires this field, so the provider defaults it to 5000 — the value the Frontegg portal uses when onboarding a SaaS application.
+- `api_timeout` (Number) Upstream request timeout in milliseconds, at least 500 and at most 5000 unless the account allows extended timeouts. The API requires this field, so the provider defaults it to 5000 — the value the Frontegg portal uses when onboarding a SaaS application.
 - `base_url` (String) HTTPS base URL the gateway calls for tools that are not attached to a source. The API requires a value, so it defaults to https://example.com — the placeholder the portal sends. It is worth setting only if you upsert tools with no source: for anything imported into an agenco_mcp_source the gateway replaces this with the source's source_url at invocation time. example.com is RFC 2606 reserved, so the placeholder cannot reach a real service.
 - `behavior_risk_actions` (Map of String) Action taken per risk level, for example {low = "observe", high = "block"}. Keys must be low, medium or high; values must be observe, step_up or block.
 - `behavior_risk_threshold` (String) Risk level at which behavior enforcement kicks in. One of: low, medium, high.
