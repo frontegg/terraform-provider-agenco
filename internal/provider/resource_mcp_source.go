@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -106,16 +107,18 @@ func (r *McpSourceResource) Schema(ctx context.Context, req resource.SchemaReque
 				Required:    true,
 			},
 			"api_timeout": schema.Int64Attribute{
-				Description: fmt.Sprintf("Upstream request timeout in milliseconds, between %d and %d. The API "+
+				Description: fmt.Sprintf("Upstream request timeout in milliseconds, at least %d and at most %d "+
+					"unless the account allows extended timeouts. The API "+
 					"requires this field, so the provider defaults it to %d for consistency with "+
-					"agenco_mcp_configuration.", minAPITimeout, maxAPITimeout, defaultAPITimeout),
+					"agenco_mcp_configuration.", minAPITimeout, defaultMaxAPITimeout, defaultAPITimeout),
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.Int64{
 					createDefaultInt64(defaultAPITimeout),
+					int64planmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.Int64{
-					int64validator.Between(minAPITimeout, maxAPITimeout),
+					int64validator.AtLeast(minAPITimeout),
 				},
 			},
 			"enabled": schema.BoolAttribute{
